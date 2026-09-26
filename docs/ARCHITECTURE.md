@@ -213,7 +213,7 @@ build step would add a failure mode for no benefit.
 
 ## Testing strategy
 
-126 tests, and the suite runs on a clean checkout with only `numpy` and `flask`
+134 tests, and the suite runs on a clean checkout with only `numpy` and `flask`
 installed — because the demo engine has no third-party dependencies. Tests that
 need real weights skip rather than fail; mark them with `-m slow` to skip them
 deliberately.

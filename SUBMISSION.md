@@ -80,12 +80,12 @@ python scripts/benchmark.py --backend onnx --runs 20
 
       | Stage | Result |
       |---|---|
-      | `pytest` with no ML extras, no weights | 119 passed, 7 skipped |
+      | `pytest` with no ML extras, no weights | 122 passed, 12 skipped |
       | `GET /` and `GET /api/status` | 200, 200 |
       | `scripts/verify_a11y.py` | 11/11 PASS |
       | `fetch_models.py --public` | all 5 artefacts, no weights in git |
       | `fetch_models.py --verify` | transcript and image class both correct |
-      | `pytest` with weights | 126 passed |
+      | `pytest` with weights | 134 passed |
 - [x] `--verify` reports the reference transcript and the correct image class.
 
 ## 3. Record the demo (1 hour)
@@ -167,7 +167,7 @@ Claims that are actually *demonstrable*, in case you are asked in the interview:
 | The models really run | `fetch_models.py --verify` checks the transcript against a known sentence |
 | The captions are accessible | `verify_a11y.py`, 11 assertions, plus the recorded screen-reader pass |
 | The DSP is correct | `tests/test_whisper_onnx.py` asserts the Whisper mel contract, filterbank area normalisation, and window periodicity |
-| It is not a stub | 126 tests; `-m "not slow"` still passes with no weights present |
+| It is not a stub | 134 tests; `-m "not slow"` still passes with no weights present |
 | Portability is real | one `Engine` ABC, three backends, benchmarked with one flag |
 | The Snapdragon path is not vapourware | `docs/SNAPDRAGON_DEPLOYMENT.md` gives the exact QNN context build, the tensor names, and the three failure modes |
 

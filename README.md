@@ -263,15 +263,17 @@ scripts/
   demo.py                terminal demo, built for screen recording
   verify_a11y.py         automated WCAG self-check
   make_sample_assets.py  regenerate the synthetic demo assets
-docs/                    architecture, deployment, accessibility
-tests/                   126 tests, including correctness against a known transcript
+  make_deck.py           regenerate the pitch deck
+  make_description_doc.py  regenerate the PDF/DOCX description
+docs/                    architecture, deployment, accessibility, deck, description
+tests/                   134 tests, including correctness against a known transcript
 assets/                  reference clip and photo, plus synthetic demo assets
 ```
 
 ## Testing
 
 ```bash
-python -m pytest tests/ -q                 # 126 tests
+python -m pytest tests/ -q                 # 134 tests
 python -m pytest tests/ -q -m "not slow"   # skip anything needing model weights
 python scripts/verify_a11y.py              # 11 accessibility assertions
 ```
@@ -281,6 +283,19 @@ because the demo engine has no third-party dependencies. Tests that need real
 weights skip rather than fail, and `filterwarnings = error::RuntimeWarning`
 means a numerical warning in the DSP path fails the build — which is how a
 silent out-of-bounds read in the mel pipeline was caught.
+
+The submission collateral is generated, not typed, so its figures come from the
+same source as the code and cannot drift:
+
+```bash
+pip install python-pptx reportlab python-docx pypdf   # build-time only
+python scripts/make_deck.py                           # docs/Snapdragoon-deck.pptx
+python scripts/make_description_doc.py                # PDF + DOCX description
+```
+
+Both read the audit files and count the test suite at build time, and
+`tests/test_description_doc.py` fails if either drifts, if a figure in the
+prose goes stale, or if the PDF picks up a glyph base-14 Helvetica cannot draw.
 
 Two reference assets are checked in specifically so the accuracy tests are real
 assertions rather than smoke tests: `assets/reference-speech.wav` (a clip whose

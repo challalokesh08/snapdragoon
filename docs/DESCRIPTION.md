@@ -22,7 +22,7 @@ in the repository.
 > are blind, deaf or hard of hearing. It runs Whisper Tiny for live speech
 > captions and MobileNet V2 for scene description, and renders both as real text
 > in the DOM — announced through a polite live region, keyboard-operable, and
-> verified by 11 automated WCAG 2.2 AA gates and 126 tests. We audited two live
+> verified by 11 automated WCAG 2.2 AA gates and 134 tests. We audited two live
 > on-device-AI pages and found 30 accessibility issues between them, including
 > 9 blockers; every category we found is now a regression test in ours. Three
 > interchangeable backends — CPU, demo, and a Qualcomm AI Hub / QNN NPU path —
@@ -59,7 +59,7 @@ in the repository.
 > project to be built and verified without the target hardware, and it means a
 > Snapdragon port is configuration, not a rewrite.
 >
-> **What is measured, and what is not.** 126 tests pass from a clean clone. The
+> **What is measured, and what is not.** 134 tests pass from a clean clone. The
 > reference clip transcribes exactly; the reference photograph classifies
 > correctly. ASR runs a 5 s window in 190–400 ms (12–26× real time) and vision in
 > ~5 ms (~190 fps) on a laptop CPU — published as a range, because two Python

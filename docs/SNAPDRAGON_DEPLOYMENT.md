@@ -12,7 +12,7 @@ Being precise here is deliberate, and it matters for how you present the work.
 | Component | Status | Evidence |
 |---|---|---|
 | Engine abstraction + all three backends | **Implemented** | `snapdragoon/engines/` |
-| Web app, SSE caption stream, accessible UI | **Verified** | 126 tests, `scripts/verify_a11y.py` (11/11) |
+| Web app, SSE caption stream, accessible UI | **Verified** | 134 tests, `scripts/verify_a11y.py` (11/11) |
 | Audio + vision front-ends, DSP, preprocessing | **Verified** | `tests/test_audio.py`, `tests/test_whisper_onnx.py` |
 | ONNX / CPU inference path | **Verified, runs correctly** | real transcripts, `fetch_models.py --verify` |
 | Whisper ONNX graph handling | **Verified end-to-end** | exact reference transcript, asserted in `tests/` |

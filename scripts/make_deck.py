@@ -19,6 +19,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Emu, Inches, Pt
 
+from _testcount import count_tests
+
 OUT = Path(__file__).resolve().parent.parent / "docs" / "Snapdragoon-deck.pptx"
 
 # -- palette ---------------------------------------------------------------
@@ -418,7 +420,8 @@ def build() -> Presentation:
          f"Whisper Tiny, 5 s window\n{BENCH['rtf_lo']}–{BENCH['rtf_hi']} real time", AMBER, Pt(33))
     stat(s, MARGIN + Inches(4.0), y + Inches(0.22), Inches(3.0), BENCH["vis"],
          f"MobileNet V2, 640×480\n{BENCH['fps']}", TEAL, Pt(33))
-    stat(s, MARGIN + Inches(7.5), y + Inches(0.22), Inches(3.0), "126", "tests passing, weights present", TEAL, Pt(33))
+    stat(s, MARGIN + Inches(7.5), y + Inches(0.22), Inches(3.0), str(count_tests()),
+    "tests passing, weights present", TEAL, Pt(33))
 
     yy = y + Inches(1.60)
     panel(s, MARGIN, yy, Inches(11.6), Inches(1.28), PANEL)
