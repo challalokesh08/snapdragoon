@@ -30,10 +30,12 @@ Do this **today**. Everything else here can be finished in an evening.
 
 ## 1. Repository hygiene (15 minutes)
 
-- [ ] `git init`, add, commit. No remote yet — see the note below.
-- [ ] Confirm `models/` is not committed (it is ~160 MB and is fetched, not vendored).
-- [ ] Confirm the repo has no secrets and no `.env`.
-- [ ] `LICENSE` present (MIT), with the Qualcomm trademark non-affiliation note.
+- [x] `git init`, add, commit. No remote yet — see the note below. *(4 commits, 46 tracked
+      files, ~1.4 MB of test fixtures, working tree clean.)*
+- [x] Confirm `models/` is not committed — it is gitignored, and no `.onnx` file is tracked.
+- [x] Confirm the repo has no secrets and no `.env` — scanned every tracked file for
+      token/key/PEM patterns, and the ignored files too. Clean.
+- [x] `LICENSE` present (MIT), with the Qualcomm trademark non-affiliation note.
 
 **On the remote.** The submission form will want a repository URL. Create the GitHub
 repo only when you are ready for it to be public, then push. Do not push to a
