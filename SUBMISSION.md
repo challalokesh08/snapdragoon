@@ -42,6 +42,11 @@ repo only when you are ready for it to be public, then push. Do not push to a
 public remote and then keep changing things — the deadline snapshot should be
 the final state.
 
+> **Live since 26 Sep:** <https://github.com/challalokesh08/snapdragoon> (public,
+> default branch `main`). Use this URL on the Unstop form. Anything committed
+> after this point changes what a judge sees, so decide deliberately whether a
+> later change is worth a re-clone.
+
 ## 2. Prove it works from a clean checkout (30 minutes)
 
 This is the highest-value check in the list, because it is the exact path a judge
@@ -69,8 +74,19 @@ python -m pytest tests/ -q                # including the -m slow accuracy tests
 python scripts/benchmark.py --backend onnx --runs 20
 ```
 
-- [ ] Every command above passes from a clean clone, in that order.
-- [ ] `--verify` reports the reference transcript and the correct image class.
+- [x] Every command above passes from a clean clone, in that order. **Run against a
+      clone of the public GitHub URL, not a local path** — a local clone does not
+      exercise the remote, and that is the path a judge actually takes:
+
+      | Stage | Result |
+      |---|---|
+      | `pytest` with no ML extras, no weights | 119 passed, 7 skipped |
+      | `GET /` and `GET /api/status` | 200, 200 |
+      | `scripts/verify_a11y.py` | 11/11 PASS |
+      | `fetch_models.py --public` | all 5 artefacts, no weights in git |
+      | `fetch_models.py --verify` | transcript and image class both correct |
+      | `pytest` with weights | 126 passed |
+- [x] `--verify` reports the reference transcript and the correct image class.
 
 ## 3. Record the demo (1 hour)
 
