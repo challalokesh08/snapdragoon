@@ -91,6 +91,27 @@ def _info(msg: str) -> None:
     print(f"  [..]   {msg}")
 
 
+# A download below this many bytes is a failure, not an artefact. Set from the
+# *smallest* legitimate file we fetch (Whisper's config.json is ~2 KB), not the
+# largest. An earlier floor of 10 KB silently rejected that file, deleted it, and
+# then reported it missing -- so a judge following the README got a broken
+# install with a download log that looked like it had succeeded.
+_MIN_ARTIFACT_BYTES = 64
+
+
+def _looks_like_an_error_page(path: Path) -> str | None:
+    """Return a reason string if ``path`` holds an error page, not content.
+
+    A captive portal or a rate-limit response is HTML, and an HTML file named
+    ``config.json`` parses as garbage rather than raising -- so the size check
+    alone is not enough.
+    """
+    head = path.read_bytes()[:200].lstrip().lower()
+    if head.startswith((b"<!doctype html", b"<html")):
+        return "the server returned an HTML page, not the file"
+    return None
+
+
 def _download(url: str, dest: Path, label: str) -> bool:
     """Fetch ``url`` to ``dest``, reporting honestly on any failure."""
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -99,21 +120,29 @@ def _download(url: str, dest: Path, label: str) -> bool:
         req = urllib.request.Request(url, headers={"User-Agent": "Snapdragoon/1.0"})
         with urllib.request.urlopen(req, timeout=120) as resp, \
                 dest.open("wb") as fh:
-            total = 0
             while chunk := resp.read(1 << 16):
                 fh.write(chunk)
-                total += len(chunk)
     except Exception as exc:  # noqa: BLE001
         _missing(f"{label}: {exc}")
         # Leave no truncated file behind for the next run to trust.
         dest.unlink(missing_ok=True)
         return False
-    size_mb = dest.stat().st_size / (1024 * 1024)
-    if size_mb < 0.01:
-        _missing(f"{label} is implausibly small ({size_mb:.3f} MB); discarded")
+
+    size = dest.stat().st_size
+    if size < _MIN_ARTIFACT_BYTES:
+        _missing(f"{label} is only {size} bytes; discarded")
         dest.unlink(missing_ok=True)
         return False
-    _ok(f"{label} ({size_mb:.1f} MB)")
+    reason = _looks_like_an_error_page(dest)
+    if reason:
+        _missing(f"{label}: {reason}; discarded")
+        dest.unlink(missing_ok=True)
+        return False
+
+    # Report in whichever unit is readable rather than always MB: a 2 KB config
+    # and a 118 MB graph are both facts worth stating precisely.
+    shown = f"{size / (1024 * 1024):.1f} MB" if size >= 1024 * 1024 else f"{size} B"
+    _ok(f"{label} ({shown})")
     return True
 
 

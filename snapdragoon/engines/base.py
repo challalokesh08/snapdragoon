@@ -99,6 +99,13 @@ class Engine(abc.ABC):
     #: True when inference is executing on a Snapdragon NPU.
     is_neural_accelerated: bool = False
 
+    #: Whether each capability has a model behind it right now. Part of the
+    #: contract rather than an ONNX-engine detail, so that ``GET /api/status``
+    #: has the same shape on every backend. A client should not have to know
+    #: which engine it got before it can ask whether captions will work.
+    has_asr: bool = False
+    has_classifier: bool = False
+
     @abc.abstractmethod
     def transcribe(self, audio: np.ndarray, sample_rate: int) -> Transcript:
         """Transcribe mono float32 audio in ``[-1, 1]``."""
@@ -116,6 +123,8 @@ class Engine(abc.ABC):
             "engine": self.name,
             "device": self.device_description,
             "neural_accelerated": self.is_neural_accelerated,
+            "asr_loaded": self.has_asr,
+            "classifier_loaded": self.has_classifier,
             "models": {
                 key: {
                     "display_name": spec.display_name,

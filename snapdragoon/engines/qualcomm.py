@@ -55,6 +55,11 @@ class QualcommEngine(Engine):
         self._backend = None          # "qnn" | "directml" | "litert"
         self._sessions: dict[str, object] = {}
         self._probe()
+        # Reported honestly rather than optimistically: a context binary that
+        # failed to load leaves the capability absent, and `/api/status` should
+        # say so rather than claim an NPU path that is not actually available.
+        self.has_asr = "asr" in self._sessions
+        self.has_classifier = "classifier" in self._sessions
 
     # -- discovery --------------------------------------------------------
     def _probe(self) -> None:

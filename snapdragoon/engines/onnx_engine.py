@@ -99,8 +99,6 @@ class OnnxEngine(Engine):
 
     def describe(self) -> dict:
         info = super().describe()
-        info["asr_loaded"] = self.has_asr
-        info["classifier_loaded"] = self.has_classifier
         if self._asr is not None:
             info["asr"] = self._asr.describe()
         elif self._asr_error:
