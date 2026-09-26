@@ -153,3 +153,97 @@ def test_benchmark_refuses_to_divide_by_a_sub_resolution_median(capsys):
     )
     assert "below this harness" in out
     assert "SLOWER" not in out, "an instant result was reported as slower than real time"
+
+
+# -- stage breakdown -------------------------------------------------------
+class _Session:
+    """Stands in for an onnxruntime InferenceSession."""
+
+    def __init__(self, cost_ms=5.0):
+        self.cost_ms = cost_ms
+        self.calls = 0
+        self._real_run = None
+
+    def run(self, *a, **k):
+        self.calls += 1
+        return "out"
+
+
+class _Runner:
+    def __init__(self, encoder, decoder):
+        self._encoder = encoder
+        self._decoder = decoder
+
+
+class _ProbedEngine:
+    def __init__(self, encoder_steps=1, decoder_steps=3):
+        self._asr = _Runner(_Session(), _Session())
+        self._encoder_steps = encoder_steps
+        self._decoder_steps = decoder_steps
+
+    def transcribe(self, audio, sample_rate):
+        for _ in range(self._encoder_steps):
+            self._asr._encoder.run()
+        for _ in range(self._decoder_steps):
+            self._asr._decoder.run()
+        return Transcript(text="a caption", window_seconds=1.0, latency_ms=1.0)
+
+
+class _OpaqueEngine:
+    """No `_asr` attribute: the breakdown must be absent, not invented."""
+
+    def transcribe(self, audio, sample_rate):
+        return Transcript(text="x", window_seconds=1.0, latency_ms=1.0)
+
+
+def test_stage_probe_separates_encoder_from_decode_loop():
+    engine = _ProbedEngine(encoder_steps=2, decoder_steps=5)
+    probe = benchmark._make_stage_probe(engine)
+    assert probe is not None
+    with probe as totals:
+        engine.transcribe(np.zeros(10), 16000)
+    assert totals["decode_steps"] == 5
+    assert totals["encoder_ms"] > 0 and totals["decoder_ms"] > 0
+
+
+def test_stage_probe_restores_the_original_run_methods():
+    """Leaving a wrapper on a live session would corrupt every later call."""
+    engine = _ProbedEngine()
+    enc, dec = engine._asr._encoder, engine._asr._decoder
+    before = (enc.run, dec.run)
+    with benchmark._make_stage_probe(engine):
+        assert enc.run is not before[0], "probe did not instrument anything"
+    assert (enc.run, dec.run) == before
+
+
+def test_stage_probe_restores_even_when_transcription_raises():
+    """An exception mid-window must not leave a timing wrapper on a live session.
+
+    `dec.run` is compared with `==`, not `is`: attribute access builds a fresh
+    bound-method object each time, so identity is not stable even when the
+    method is genuinely the original one.
+    """
+    engine = _ProbedEngine()
+    dec = engine._asr._decoder
+    before = dec.run
+
+    probe = benchmark._make_stage_probe(engine)
+    with pytest.raises(RuntimeError):
+        with probe:
+            raise RuntimeError("inference failed")
+    assert dec.run == before, "decoder wrapper leaked out of the failed block"
+
+
+def test_stage_breakdown_is_absent_for_an_engine_it_cannot_inspect(capsys):
+    """A missing breakdown must never be printed as a measured one."""
+    class _OpaqueWithModel(_OpaqueEngine):
+        has_asr = True
+
+    assert benchmark._make_stage_probe(_OpaqueWithModel()) is None
+
+    results: dict = {}
+    benchmark._benchmark_asr(_OpaqueWithModel(), _Args(), results)
+    out = capsys.readouterr().out
+    assert "asr" in results, "the run itself should still be reported"
+    assert "stage_breakdown_ms" not in results["asr"]
+    assert "of which" not in out

@@ -45,6 +45,36 @@ def _stats(samples: list[float]) -> dict:
     }
 
 
+def math_stack_info() -> dict:
+    """Record the numeric stack, because it changes the answer by 2x.
+
+    Two installs of the *same* onnxruntime version, on the same machine, with
+    identical session options, were measured at 191 ms and 402 ms for the same
+    5 s window. The only differences were numpy 2.5.3 built against Apple's
+    Accelerate versus numpy 2.1.3 built against OpenBLAS. So an absolute
+    millisecond figure is not a property of this project -- it is a property of
+    the environment -- and the honest response is to ship the environment with
+    the number so a reader can account for a mismatch instead of wondering.
+    """
+    info: dict = {}
+    try:
+        import numpy as np
+
+        info["numpy"] = np.__version__
+        deps = np.__config__.show(mode="dicts").get("Build Dependencies", {})
+        info["numpy_blas"] = deps.get("blas", {}).get("name", "unknown")
+    except Exception:  # noqa: BLE001
+        info["numpy"] = "unavailable"
+    try:
+        import onnxruntime as ort
+
+        info["onnxruntime"] = ort.__version__
+        info["providers_available"] = list(ort.get_available_providers())
+    except Exception:  # noqa: BLE001
+        info["onnxruntime"] = "unavailable"
+    return info
+
+
 def host_info() -> dict:
     info = {
         "platform": platform.platform(),
@@ -69,6 +99,76 @@ def host_info() -> dict:
         except Exception:  # noqa: BLE001
             pass
     return info
+
+
+class _StageProbe:
+    """Times the encoder and decoder ORT calls for the life of a `with` block.
+
+    Reported because the total alone is misleading. On an 8-core Apple Silicon
+    laptop the Whisper *encoder* forward measures a flat 125 ms regardless of
+    which interpreter, which onnxruntime build, thread count or session-creation
+    order is used -- it is a fixed cost of the graph. Everything above that is
+    per-token work, whose cost is dominated by re-feeding the encoder KV cache
+    (4 layers x 2 tensors x 1x8x1500x64 float32 ~= 25 MB) on every step. That is
+    a property of the encoder+decoder ONNX export, not of the hardware.
+
+    The split is the useful part for a Snapdragon port: a faster NPU moves the
+    125 ms and nothing else. It also explains an otherwise baffling
+    observation -- total ASR latency varied 2x between two Python environments
+    on one machine while vision stayed flat at 4.9 ms. The variable part is
+    memory traffic, which the allocator and BLAS build affect; a conv forward
+    is compute-bound and neither does.
+
+    `make_stage_probe` returns None when the engine has no inspectable runner,
+    so a missing breakdown is never presented as a measured one.
+    """
+
+    def __init__(self, engine):
+        self._totals = {"encoder_ms": 0.0, "decoder_ms": 0.0,
+                        "decode_steps": 0}
+        runner = getattr(engine, "_asr", None)
+        encoder = getattr(runner, "_encoder", None)
+        decoder = getattr(runner, "_decoder", None)
+        if encoder is None or decoder is None:
+            raise TypeError("engine exposes no encoder+decoder pair")
+        if not (hasattr(encoder, "run") and hasattr(decoder, "run")):
+            raise TypeError("sessions do not expose run()")
+        self._encoder, self._decoder = encoder, decoder
+        self._enc_run, self._dec_run = encoder.run, decoder.run
+        self._armed = False
+
+    def __enter__(self):
+        encoder, decoder = self._encoder, self._decoder
+        encoder.run = self._wrap(self._enc_run, "encoder_ms")
+        decoder.run = self._wrap(self._dec_run, "decoder_ms", steps=True)
+        self._armed = True
+        return self._totals
+
+    def __exit__(self, *exc):
+        if self._armed:
+            self._encoder.run = self._enc_run
+            self._decoder.run = self._dec_run
+            self._armed = False
+        return False
+
+    def _wrap(self, fn, key, steps=False):
+        def wrapper(*a, **k):
+            t = time.perf_counter()
+            try:
+                return fn(*a, **k)
+            finally:
+                self._totals[key] += (time.perf_counter() - t) * 1000.0
+                if steps:
+                    self._totals["decode_steps"] += 1
+        return wrapper
+
+
+def _make_stage_probe(engine):
+    """Return a probe for ``engine``, or None if its internals are not visible."""
+    try:
+        return _StageProbe(engine)
+    except TypeError:
+        return None
 
 
 def _benchmark_asr(engine, args, results: dict) -> None:
@@ -123,10 +223,17 @@ def _benchmark_asr(engine, args, results: dict) -> None:
     window_seconds = want / float(sr)
     samples: list[float] = []
     refuted = 0
+    probe = _make_stage_probe(engine)
+    stages: dict = {}
     for i in range(args.runs + args.warmup):
         w = windows[i % len(windows)]
         t0 = time.perf_counter()
-        result = engine.transcribe(w, sr)
+        if probe is not None:
+            with probe as acc:
+                result = engine.transcribe(w, sr)
+            stages = acc
+        else:
+            result = engine.transcribe(w, sr)
         dt = (time.perf_counter() - t0) * 1000.0
         if not result.usable or result.text.startswith("["):
             # An engine with no model returns a bracketed marker and is marked
@@ -149,6 +256,15 @@ def _benchmark_asr(engine, args, results: dict) -> None:
     results["asr"] = stats
     results["asr"]["window_seconds"] = round(window_seconds, 2)
     results["asr"]["source"] = f"assets/{clip.name}"
+    if stages:
+        n = args.runs + args.warmup
+        enc = stages["encoder_ms"] / n
+        dec = stages["decoder_ms"] / n
+        results["asr"]["stage_breakdown_ms"] = {
+            "encoder": round(enc, 1),
+            "decode_loop": round(dec, 1),
+            "decode_steps_per_window": round(stages["decode_steps"] / n, 1),
+        }
 
     print(f"\n  ASR  ({window_seconds:g}s window, real speech from {clip.name})")
     if stats:
@@ -166,6 +282,11 @@ def _benchmark_asr(engine, args, results: dict) -> None:
             results["asr"]["realtime_factor"] = round(rtf, 2)
             print(f"    real-time factor {rtf:.2f}x  "
                   f"({'faster' if rtf >= 1 else 'SLOWER'} than real time)")
+            if "stage_breakdown_ms" in results["asr"]:
+                b = results["asr"]["stage_breakdown_ms"]
+                print(f"    of which: encoder {b['encoder']} ms fixed, "
+                      f"{b['decode_steps_per_window']} decode steps "
+                      f"{b['decode_loop']} ms")
 
 
 def main() -> int:
@@ -181,8 +302,8 @@ def main() -> int:
     args = ap.parse_args()
 
     print(f"\nSnapdragoon benchmark  (runs={args.runs}, warmup={args.warmup})\n")
-    for k, v in host_info().items():
-        print(f"  {k:10s} {v}")
+    for k, v in {**host_info(), **math_stack_info()}.items():
+        print(f"  {k:18s} {v}")
 
     try:
         engine = get_engine(args.backend)
@@ -201,7 +322,8 @@ def main() -> int:
             "           Install requirements-ml.txt and fetch models first.\n"
         )
 
-    results: dict = {"host": host_info(), "engine": engine.name,
+    results: dict = {"host": host_info(), "math_stack": math_stack_info(),
+                     "engine": engine.name,
                      "device": engine.device_description,
                      "neural_accelerated": engine.is_neural_accelerated}
 

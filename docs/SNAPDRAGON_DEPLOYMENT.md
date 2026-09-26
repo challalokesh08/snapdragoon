@@ -12,7 +12,7 @@ Being precise here is deliberate, and it matters for how you present the work.
 | Component | Status | Evidence |
 |---|---|---|
 | Engine abstraction + all three backends | **Implemented** | `snapdragoon/engines/` |
-| Web app, SSE caption stream, accessible UI | **Verified** | 122 tests, `scripts/verify_a11y.py` (11/11) |
+| Web app, SSE caption stream, accessible UI | **Verified** | 126 tests, `scripts/verify_a11y.py` (11/11) |
 | Audio + vision front-ends, DSP, preprocessing | **Verified** | `tests/test_audio.py`, `tests/test_whisper_onnx.py` |
 | ONNX / CPU inference path | **Verified, runs correctly** | real transcripts, `fetch_models.py --verify` |
 | Whisper ONNX graph handling | **Verified end-to-end** | exact reference transcript, asserted in `tests/` |
@@ -240,12 +240,17 @@ engine     onnx
 device     ONNX Runtime on CPU (development baseline)
 
 ASR  (5s window, real speech from reference-speech.wav)
-  mean 409.55 ms | median 406.45 ms | p90 443.81 ms | stdev 20.70 ms
-  real-time factor 12.30x  (faster than real time)
+  mean 393.04 ms | median 392.27 ms | p90 417.60 ms | stdev 16.99 ms
+  real-time factor 12.75x  (faster than real time)
+  of which: encoder 329.3 ms fixed, 12.0 decode steps 45.9 ms
 
 Vision (640x480 frame)
-  mean 5.43 ms | median 5.30 ms | p90 5.83 ms | stdev 0.77 ms
-  188.68 fps
+  mean 4.93 ms | median 4.87 ms | p90 5.26 ms | stdev 0.21 ms
+  205.34 fps
+
+In a clean venv (numpy 2.5.3 / Accelerate) the same command reports
+ASR median 193.8 ms, 25.8x real time, encoder 148.4 ms, decode 55.0 ms;
+vision median 5.71 ms, 175 fps. Publish the range, not the best number.
 
 Attach the JSON. It is proof the numbers came from a real harness, and it
 records `source: assets/reference-speech.wav` and `window_seconds: 5.0` so a
