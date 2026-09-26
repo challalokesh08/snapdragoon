@@ -160,7 +160,10 @@
     <ul class="prose-list">
       <li>Captions microphone speech entirely on-device, with no network call.</li>
       <li>Describes what the camera sees, with confidence scores.</li>
-      <li>Runs on the Snapdragon NPU via Qualcomm AI Hub, or on CPU via ONNX Runtime.</li>
+      <li>Runs on CPU via ONNX Runtime, with a Snapdragon NPU path implemented
+          against Qualcomm AI Hub and QNN. The status panel below always states
+          which engine is live and whether it is NPU-accelerated — it will not
+          imply an NPU it is not using.</li>
     </ul>
 
     <h3>Accessibility commitments</h3>

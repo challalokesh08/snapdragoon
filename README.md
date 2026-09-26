@@ -2,10 +2,10 @@
 
 # 🐉 Snapdragoon
 
-**An offline, on-device accessibility co-pilot for Snapdragon® AI Lab**
+**An offline, on-device accessibility co-pilot, built for Snapdragon® AI Lab**
 
-Live speech captions and scene description, running entirely on the NPU.
-No account. No network call. No data leaves the device.
+Live speech captions and scene description, running entirely on your own
+hardware. No account. No network call. No data leaves the device.
 
 </div>
 
@@ -25,15 +25,18 @@ can hear is the same as no caption at all.
 
 ## What it does
 
-| Capability | Model | Runs on |
-|---|---|---|
-| Live speech-to-text captions | Whisper Tiny (EN) | Snapdragon NPU via Qualcomm AI Hub / QNN |
-| Scene description with confidence | MobileNet V2 (ImageNet-1k) | Snapdragon NPU via Qualcomm AI Hub / QNN |
-| CPU fallback for development | ONNX Runtime | Any x86 / ARM CPU, including your Mac |
+| Capability | Model | Verified on | Target |
+|---|---|---|---|
+| Live speech-to-text captions | Whisper Tiny (EN) | CPU, ONNX Runtime | Snapdragon NPU via Qualcomm AI Hub / QNN |
+| Scene description with confidence | MobileNet V2 (ImageNet-1k) | CPU, ONNX Runtime | Snapdragon NPU via Qualcomm AI Hub / QNN |
+| Runs with no model files at all | none (self-labelling demo) | Any CPU | any |
 
-Both models are small enough to be genuinely real-time on a Snapdragon NPU, and
-both are available from the Qualcomm AI Hub, so the deployment path is a compile
-step rather than a rewrite.
+The two columns are kept separate on purpose. The right-hand one is a design
+target: both models are available from the Qualcomm AI Hub and are small enough
+to be real-time on a Snapdragon NPU, so the deployment is a compile step rather
+than a rewrite. **It has not been run on Snapdragon hardware** — see
+[what is and is not verified](#verified-results) — and the app will tell you
+which engine it is actually on rather than implying an NPU.
 
 ## Verified results
 
