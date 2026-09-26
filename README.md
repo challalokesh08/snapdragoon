@@ -42,8 +42,15 @@ Measured on this machine (Apple Silicon, macOS arm64, Python 3.13, ONNX Runtime
 
 | Stage | Median | p90 | Throughput |
 |---|---|---|---|
-| Whisper Tiny, 5 s window | **378 ms** | 396 ms | **13.2× real time** |
-| MobileNet V2, 640×480 frame | **5.3 ms** | 5.8 ms | **190 fps** |
+| Whisper Tiny, 5 s window of real speech | **400 ms** | 444 ms | **12.3× real time** |
+| MobileNet V2, 640×480 frame | **5.3 ms** | 5.8 ms | **189 fps** |
+
+Measured on real audio, not on silence. That distinction is not pedantry: an
+earlier version of the benchmark fed `np.zeros`, which the engine's short-window
+gate declines to transcribe, so it was timing the gate and reporting 0.03 ms and
+a real-time factor of 166,666×. The benchmark now reads the checked-in reference
+clip, and refuses to report an ASR figure at all when every window came back
+refused.
 
 Accuracy matters as much as speed, because a fast wrong answer is worthless:
 
@@ -224,14 +231,14 @@ scripts/
   verify_a11y.py         automated WCAG self-check
   make_sample_assets.py  regenerate the synthetic demo assets
 docs/                    architecture, deployment, accessibility
-tests/                   112 tests, including correctness against a known transcript
+tests/                   122 tests, including correctness against a known transcript
 assets/                  reference clip and photo, plus synthetic demo assets
 ```
 
 ## Testing
 
 ```bash
-python -m pytest tests/ -q                 # 112 tests
+python -m pytest tests/ -q                 # 122 tests
 python -m pytest tests/ -q -m "not slow"   # skip anything needing model weights
 python scripts/verify_a11y.py              # 11 accessibility assertions
 ```

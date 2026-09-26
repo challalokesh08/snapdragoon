@@ -213,7 +213,7 @@ build step would add a failure mode for no benefit.
 
 ## Testing strategy
 
-112 tests, and the suite runs on a clean checkout with only `numpy` and `flask`
+122 tests, and the suite runs on a clean checkout with only `numpy` and `flask`
 installed — because the demo engine has no third-party dependencies. Tests that
 need real weights skip rather than fail; mark them with `-m slow` to skip them
 deliberately.
@@ -224,6 +224,7 @@ deliberately.
 | `tests/test_audio.py` | silence and content detection, wav replay, image preprocessing |
 | `tests/test_whisper_onnx.py` | cache shapes, token loading, prompt shape, the mel front-end, a **contract fake** for the KV cache, and correctness against a known transcript |
 | `tests/test_web.py` | routes, path traversal, SSE contract, 18 accessibility assertions |
+| `tests/test_benchmark.py` | that the benchmark measures inference and refuses to invent a figure |
 
 Three choices here are worth defending:
 

@@ -21,7 +21,7 @@ part of the model output contract.
 Two layers, both runnable:
 
 ```bash
-python -m pytest tests/ -q          # 64 tests, includes 17 a11y assertions
+python -m pytest tests/ -q          # 122 tests, includes 18 a11y assertions
 python scripts/verify_a11y.py       # 11 checks against the served page
 ```
 

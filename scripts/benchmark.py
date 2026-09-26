@@ -71,6 +71,103 @@ def host_info() -> dict:
     return info
 
 
+def _benchmark_asr(engine, args, results: dict) -> None:
+    """Time real transcription of real speech.
+
+    It has to be real audio. An earlier version of this script fed
+    ``np.zeros(...)``, which the engine's short-window gate now declines to
+    transcribe -- so the benchmark silently started timing the gate instead of
+    the model and reported 0.03 ms and a real-time factor of 166,666x. A
+    benchmark that measures its own guard rather than the thing it exists to
+    measure is worse than no benchmark, because the number looks plausible.
+
+    Rather than synthesise something, this uses the checked-in reference clip:
+    its correct transcript is known, so the input is both real and verifiable.
+    """
+    import numpy as np
+
+    clip = config.PROJECT_ROOT / "assets" / "reference-speech.wav"
+    if not clip.is_file():
+        print("\n  ASR  skipped: assets/reference-speech.wav is missing.")
+        print("       Synthetic input would be measured, but a synthetic input")
+        print("       cannot be transcribed and this benchmark would be fiction.")
+        return
+
+    # A missing model makes `transcribe` return an error string immediately, so
+    # the loop below would "measure" a function call that does no inference and
+    # report a spectacular 0.03 ms. Check up front and say nothing rather than
+    # say something wrong.
+    if not getattr(engine, "has_asr", False):
+        print("\n  ASR  skipped: no speech model is loaded.")
+        print(f"       Get one with:  python scripts/fetch_models.py --public")
+        print("       Without this check the numbers below would be the cost of")
+        print("       returning an error string, not of running a model.")
+        return
+
+    import wave
+
+    with wave.open(str(clip), "rb") as wf:
+        sr = wf.getframerate()
+        raw = wf.readframes(wf.getnframes())
+    mono = np.frombuffer(raw, dtype=np.int16).astype(np.float32) / 32768.0
+
+    want = int(config.CAPTURE_CHUNK_SECONDS * sr)
+    # Only full windows: a short tail is refused by the engine, so including it
+    # would measure the refusal rather than the inference.
+    windows = [mono[i:i + want] for i in range(0, len(mono) - want + 1, want)]
+    if not windows:
+        print(f"\n  ASR  skipped: {clip.name} is shorter than one "
+              f"{config.CAPTURE_CHUNK_SECONDS:g}s window.")
+        return
+
+    window_seconds = want / float(sr)
+    samples: list[float] = []
+    refuted = 0
+    for i in range(args.runs + args.warmup):
+        w = windows[i % len(windows)]
+        t0 = time.perf_counter()
+        result = engine.transcribe(w, sr)
+        dt = (time.perf_counter() - t0) * 1000.0
+        if not result.usable or result.text.startswith("["):
+            # An engine with no model returns a bracketed marker and is marked
+            # usable, so the flag check alone would not catch it.
+            refuted += 1
+        if i >= args.warmup:
+            samples.append(dt)
+
+    if refuted:
+        print(f"\n  ASR  WARNING: the engine refused {refuted} of "
+              f"{args.runs + args.warmup} windows, so these numbers are NOT")
+        print("       inference times. Check that the input is real audio.")
+
+    if refuted == args.runs + args.warmup:
+        print("\n  ASR  FAILED: every window was refused, so there is no "
+              "inference time to report.")
+        return
+
+    stats = _stats(samples)
+    results["asr"] = stats
+    results["asr"]["window_seconds"] = round(window_seconds, 2)
+    results["asr"]["source"] = f"assets/{clip.name}"
+
+    print(f"\n  ASR  ({window_seconds:g}s window, real speech from {clip.name})")
+    if stats:
+        print(f"    mean {stats['mean_ms']} ms | median {stats['median_ms']} ms | "
+              f"p90 {stats['p90_ms']} ms | stdev {stats['stdev_ms']} ms")
+        # A median that rounds to 0.0 is below this harness's resolution, not
+        # infinitely fast. Dividing by it yields 0, which the naive comparison
+        # then reports as "SLOWER than real time" -- precisely backwards.
+        median = stats["median_ms"]
+        if median <= 0:
+            print("    real-time factor not reported: the median rounded to "
+                  "0.0 ms, below this harness's resolution")
+        else:
+            rtf = (window_seconds * 1000) / median
+            results["asr"]["realtime_factor"] = round(rtf, 2)
+            print(f"    real-time factor {rtf:.2f}x  "
+                  f"({'faster' if rtf >= 1 else 'SLOWER'} than real time)")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -111,27 +208,7 @@ def main() -> int:
     engine.warmup()
 
     if not args.vision_only:
-        # int() is required, not cosmetic: CAPTURE_CHUNK_SECONDS is a float
-        # config value, and np.zeros rejects a float length.
-        window_samples = int(config.CAPTURE_CHUNK_SECONDS * config.SAMPLE_RATE)
-        audio = np.zeros(window_samples, dtype=np.float32)
-        samples = []
-        for i in range(args.runs + args.warmup):
-            t0 = time.perf_counter()
-            engine.transcribe(audio, config.SAMPLE_RATE)
-            dt = (time.perf_counter() - t0) * 1000.0
-            if i >= args.warmup:
-                samples.append(dt)
-        s = _stats(samples)
-        results["asr"] = s
-        print(f"\n  ASR  ({config.CAPTURE_CHUNK_SECONDS:g}s window)")
-        if s:
-            print(f"    mean {s['mean_ms']} ms | median {s['median_ms']} ms | "
-                  f"p90 {s['p90_ms']} ms | stdev {s['stdev_ms']} ms")
-            rtf = (config.CAPTURE_CHUNK_SECONDS * 1000) / s["median_ms"] if s["median_ms"] else 0
-            results["asr"]["realtime_factor"] = round(rtf, 2)
-            print(f"    real-time factor {rtf:.2f}x  "
-                  f"({'faster' if rtf >= 1 else 'SLOWER'} than real time)")
+        _benchmark_asr(engine, args, results)
 
     if not args.asr_only:
         frame = (np.random.default_rng(0).random((480, 640, 3)) * 255).astype(np.uint8)

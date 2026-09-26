@@ -149,7 +149,7 @@ Claims that are actually *demonstrable*, in case you are asked in the interview:
 | The models really run | `fetch_models.py --verify` checks the transcript against a known sentence |
 | The captions are accessible | `verify_a11y.py`, 11 assertions, plus the recorded screen-reader pass |
 | The DSP is correct | `tests/test_whisper_onnx.py` asserts the Whisper mel contract, filterbank area normalisation, and window periodicity |
-| It is not a stub | 112 tests; `-m "not slow"` still passes with no weights present |
+| It is not a stub | 122 tests; `-m "not slow"` still passes with no weights present |
 | Portability is real | one `Engine` ABC, three backends, benchmarked with one flag |
 | The Snapdragon path is not vapourware | `docs/SNAPDRAGON_DEPLOYMENT.md` gives the exact QNN context build, the tensor names, and the three failure modes |
 
