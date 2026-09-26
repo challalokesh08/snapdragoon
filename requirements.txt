@@ -1,0 +1,24 @@
+# Snapdragoon runtime dependencies.
+#
+# Two tiers on purpose. `requirements.txt` gets you a running demo with no
+# model downloads; `requirements-ml.txt` adds real inference. Install the second
+# only if you have the time and the model files.
+
+# --- core (required) -------------------------------------------------------
+flask>=3.0,<4
+numpy>=1.24
+
+# --- capture ---------------------------------------------------------------
+# sounddevice: microphone input. Needs PortAudio.
+#   macOS:   brew install portaudio
+#   Windows: the wheel bundles it.
+sounddevice>=0.4.6; platform_system != "Linux"
+# Linux alternative if you prefer PulseAudio/PipeWire bindings:
+# sounddevice>=0.4.6; platform_system == "Linux"
+
+# --- vision ----------------------------------------------------------------
+# Camera capture and image decode/encode.
+opencv-python-headless>=4.9
+
+# --- dev -------------------------------------------------------------------
+pytest>=8.0

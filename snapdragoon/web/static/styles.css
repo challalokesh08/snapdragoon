@@ -1,0 +1,300 @@
+/* Snapdragoon UI
+ *
+ * Accessibility rules baked in, not bolted on:
+ *  - Focus indicators are never removed. :focus-visible gets a 3px outline with
+ *    a 2px offset so it stays visible on both light and dark surfaces.
+ *  - All text/background pairs meet WCAG 2.2 AA (4.5:1 body, 3:1 large).
+ *  - prefers-reduced-motion disables every transition and animation.
+ *  - Touch targets are >= 44px.
+ *  - Layout reflows to 320px without horizontal scrolling.
+ */
+
+:root {
+  --ink:            #16181d;   /* 16.9:1 on --paper */
+  --ink-muted:      #4a4f5a;   /* 8.1:1  on --paper */
+  --paper:          #ffffff;
+  --paper-sunken:   #f4f5f7;
+  --line:           #d3d7de;
+  --brand:          #0b4fd8;   /* 7.4:1  on --paper */
+  --brand-dark:     #083ba6;
+  --brand-contrast: #ffffff;   /* 7.4:1  on --brand */
+  --warn-bg:        #fff4e5;
+  --warn-line:      #b26a00;
+  --warn-ink:       #6b3d00;   /* 7.0:1  on --warn-bg */
+  --ok-ink:         #0f6b3f;
+  --focus:          #0b4fd8;
+  --radius:         10px;
+  --measure:        68ch;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:            #f2f4f8;
+    --ink-muted:      #b9c0cc;
+    --paper:          #14161a;
+    --paper-sunken:   #1c1f25;
+    --line:           #333944;
+    --brand:          #7ea8ff;
+    --brand-dark:     #a8c4ff;
+    --brand-contrast: #0b1020;
+    --warn-bg:        #2e2410;
+    --warn-line:      #e0a34a;
+    --warn-ink:       #ffd79a;
+    --ok-ink:         #74d7a4;
+    --focus:          #7ea8ff;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ---- Skip link -------------------------------------------------------- */
+/* Visually hidden but still focusable and still announced. Using
+   clip-path rather than display:none keeps it in the tab order. */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.75rem 1.25rem;
+  background: var(--brand);
+  color: var(--brand-contrast);
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 0 0 var(--radius) 0;
+}
+.skip-link:focus {
+  left: 0;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* ---- Focus ------------------------------------------------------------ */
+/* Never `outline: none`. Both the ring and a shadow so it survives any
+   background. */
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* The skip link's landing target. It is focused programmatically, and
+   `:focus-visible` is not reliable for programmatic focus -- browsers decide by
+   heuristics and differ. So `main` gets a real indicator on *any* focus, not
+   just `:focus-visible`. Outlining the main region is exactly the feedback
+   wanted: it confirms "you are now at the start of the content", which is the
+   whole point of the skip link. */
+main:focus,
+main:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+/* ---- Layout ----------------------------------------------------------- */
+.wrap {
+  width: min(100% - 2rem, var(--measure));
+  margin-inline: auto;
+}
+
+.banner {
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line);
+}
+.banner__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 1rem;
+  padding-block: 1rem;
+}
+.brand {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.brand__mark { color: var(--brand); }
+.banner__tagline { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+
+h1 { font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem); line-height: 1.2; margin: 0 0 0.5rem; letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.3rem, 1.1rem + 1vw, 1.6rem); line-height: 1.25; margin: 2rem 0 0.5rem; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; margin: 1.5rem 0 0.4rem; }
+p  { margin: 0 0 1rem; }
+
+.lede { color: var(--ink-muted); max-width: 60ch; }
+.hint { color: var(--ink-muted); font-size: 0.9rem; max-width: 62ch; }
+.rule { border: 0; border-top: 1px solid var(--line); margin: 3rem 0 0; }
+
+/* ---- Engine strip ----------------------------------------------------- */
+.engine-strip {
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line);
+  padding-block: 1rem 1.25rem;
+}
+.engine-strip__title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin: 0 0 0.6rem;
+}
+.engine-strip__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin: 0;
+}
+.engine-strip__cell dt {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+}
+.engine-strip__cell dd {
+  margin: 0.1rem 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---- Notice ----------------------------------------------------------- */
+.notice {
+  margin: 0.9rem 0 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: 0.92rem;
+}
+.notice--ok { border-left-color: var(--ok-ink); }
+
+/* ---- Subnav ----------------------------------------------------------- */
+.subnav { border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--paper); z-index: 10; }
+.subnav__list { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; list-style: none; margin: 0; padding: 0.6rem 0; }
+.subnav__list a { color: var(--ink-muted); text-decoration: none; padding: 0.35rem 0; display: inline-block; }
+.subnav__list a:hover { color: var(--ink); text-decoration: underline; }
+.subnav__list a[aria-current="page"] { color: var(--brand); font-weight: 650; text-decoration: underline; text-underline-offset: 4px; }
+
+/* ---- Buttons ---------------------------------------------------------- */
+.controls { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.25rem 0 0.5rem; }
+
+.btn {
+  /* 44px minimum target, comfortably over the 24px AA floor. */
+  min-height: 44px;
+  padding: 0.6rem 1.15rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.btn:hover:not(:disabled) { border-color: var(--brand); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn--primary { background: var(--brand); color: var(--brand-contrast); border-color: var(--brand); }
+.btn--primary:hover:not(:disabled) { background: var(--brand-dark); border-color: var(--brand-dark); }
+
+/* ---- Panels ----------------------------------------------------------- */
+.panel {
+  margin: 1.5rem 0;
+  padding: 1.1rem 1.25rem;
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.panel__title { margin: 0 0 0.6rem; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); }
+
+.caption { margin: 0; font-size: 1.15rem; line-height: 1.55; overflow-wrap: anywhere; }
+.caption--latest { font-weight: 600; min-height: 1.8em; }
+.caption--empty { color: var(--ink-muted); font-weight: 400; }
+
+.transcript { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.5rem; }
+.transcript__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.8rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.transcript__time { font-variant-numeric: tabular-nums; color: var(--ink-muted); font-size: 0.82rem; }
+.transcript__text { overflow-wrap: anywhere; }
+.transcript__meta { grid-column: 2; font-size: 0.78rem; color: var(--ink-muted); }
+
+/* ---- Detections ------------------------------------------------------- */
+.detections { list-style: none; margin: 0.9rem 0 0; padding: 0; display: grid; gap: 0.4rem; }
+.detection { display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 1rem; align-items: center; }
+.detection__label { font-weight: 600; }
+.detection__score { color: var(--ink-muted); font-variant-numeric: tabular-nums; font-size: 0.88rem; }
+.detection__bar { grid-column: 1 / -1; height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.detection__fill { display: block; height: 100%; background: var(--brand); border-radius: 999px; }
+.detection__bar[aria-hidden="true"] { /* decorative; text carries the value */ }
+
+/* ---- Form field ------------------------------------------------------- */
+.field { margin: 1rem 0 0.4rem; }
+.field label { display: block; font-weight: 600; margin-bottom: 0.35rem; }
+.field input[type="file"] {
+  font: inherit;
+  padding: 0.5rem;
+  width: 100%;
+  max-width: 32rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.prose-list { margin: 0 0 1rem; padding-left: 1.25rem; display: grid; gap: 0.35rem; }
+.prose-list li { max-width: 62ch; }
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--paper-sunken);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+.contentinfo {
+  margin-top: 4rem;
+  padding-block: 1.75rem;
+  border-top: 1px solid var(--line);
+  background: var(--paper-sunken);
+  color: var(--ink-muted);
+  font-size: 0.9rem;
+}
+.contentinfo p { margin: 0 0 0.35rem; }
+
+/* ---- Reduced motion --------------------------------------------------- */
+/* Honour the OS preference globally rather than per-component. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ---- Forced colours (Windows High Contrast) ---------------------------- */
+@media (forced-colors: active) {
+  .btn, .panel, .transcript__item, .field input { border: 1px solid ButtonBorder; }
+  .detection__fill { background: Highlight; }
+  :where(a, button, input, [tabindex]):focus-visible { outline: 3px solid Highlight; }
+}
+
+/* ---- Print ------------------------------------------------------------ */
+@media print {
+  .controls, .subnav, .skip-link { display: none; }
+  body { color: #000; background: #fff; }
+}

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snapdragoon — on-device accessibility co-pilot</title>
+<meta name="description" content="Snapdragoon is an offline, on-device accessibility co-pilot that captions speech and describes scenes using AI models running locally on Snapdragon hardware.">
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<!-- 1. Skip link: first focusable element, visually hidden until focused.
+        Must NOT use display:none or visibility:hidden, which remove it from
+        the tab order entirely. -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- 2. status.json inlined at serve time so the first paint is already honest
+        about which engine is live. -->
+<header class="banner">
+  <div class="wrap banner__inner">
+    <p class="brand">
+      <span class="brand__mark" aria-hidden="true">◈</span>
+      Snapdragoon
+    </p>
+    <p class="banner__tagline">On-device accessibility co-pilot</p>
+  </div>
+</header>
+
+<!-- 3. Engine disclosure. Not decorative: it tells the user whether captions
+        are real inference or a synthetic placeholder.
+        Deliberately an <aside>, not a <section>: it is tangential status
+        information, not a content section. Using <section> with an <h2> here
+        put an h2 before the page <h1>, which breaks heading order. -->
+<aside class="engine-strip" aria-label="Inference status">
+  <div class="wrap">
+    <p class="engine-strip__title">Inference status</p>
+    <dl class="engine-strip__grid">
+      <div class="engine-strip__cell">
+        <dt>Engine</dt>
+        <dd id="stat-engine">Loading…</dd>
+      </div>
+      <div class="engine-strip__cell">
+        <dt>Device</dt>
+        <dd id="stat-device">Loading…</dd>
+      </div>
+      <div class="engine-strip__cell">
+        <dt>Neural accelerated</dt>
+        <dd id="stat-npu">Loading…</dd>
+      </div>
+    </dl>
+    <p id="engine-warning" class="notice notice--warn" role="status" hidden></p>
+  </div>
+</aside>
+
+<nav class="subnav" aria-label="Snapdragoon sections">
+  <div class="wrap">
+    <ul class="subnav__list">
+      <li><a href="#captions" aria-current="page">Live captions</a></li>
+      <li><a href="#scene">Scene description</a></li>
+      <li><a href="#about">About &amp; accessibility</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main id="main-content" class="wrap" tabindex="-1">
+
+  <!-- 4. Live captions -->
+  <section id="captions" aria-labelledby="captions-heading">
+    <h1 id="captions-heading">Live captions</h1>
+    <p class="lede">
+      Speech is transcribed on-device. Captions appear below and are announced
+      to screen readers politely, so they never interrupt what you are reading.
+    </p>
+
+    <div class="controls" role="group" aria-label="Caption controls">
+      <!-- 5. Real <button> elements. Not div[role=button] — that pattern
+              provides no native Enter/Space activation. -->
+      <button type="button" id="btn-start" class="btn btn--primary" aria-describedby="caption-hint">
+        Start captions
+      </button>
+      <button type="button" id="btn-stop" class="btn" disabled>
+        Stop captions
+      </button>
+      <button type="button" id="btn-clear" class="btn" disabled>
+        Clear transcript
+      </button>
+    </div>
+    <p id="caption-hint" class="hint">
+      Requires microphone permission. Captions are processed locally and are not
+      sent to any server.
+    </p>
+
+    <!-- 6. The live region. role="status" implies aria-live="polite" and
+          aria-atomic="false" so only the new caption is announced. The final
+          transcript is a separate static region so screen reader users can
+          re-read history on demand instead of it being trapped in a log. -->
+    <div class="panel">
+      <h2 id="latest-caption-heading" class="panel__title">Latest caption</h2>
+      <p id="live-caption" class="caption caption--latest"
+         role="status" aria-live="polite" aria-atomic="true">
+        Captions have not started yet.
+      </p>
+    </div>
+
+    <h2 id="transcript-heading" class="panel__title">Full transcript</h2>
+    <ol id="transcript" class="transcript" aria-labelledby="transcript-heading"></ol>
+    <p id="transcript-empty" class="hint">The transcript is empty.</p>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 7. Scene description -->
+  <section id="scene" aria-labelledby="scene-heading">
+    <h2 id="scene-heading">Scene description</h2>
+    <p class="lede">
+      Point a camera at something, or upload a still. The three most likely
+      objects are returned with confidence scores.
+    </p>
+
+    <div class="controls" role="group" aria-label="Scene description controls">
+      <button type="button" id="btn-camera" class="btn btn--primary" aria-describedby="scene-hint">
+        Describe from camera
+      </button>
+      <button type="button" id="btn-sample" class="btn">
+        Use bundled sample image
+      </button>
+    </div>
+
+    <div class="field">
+      <!-- 8. Every input has an explicit, associated <label>. -->
+      <label for="file-image">Or upload an image</label>
+      <input type="file" id="file-image" name="image" accept="image/*"
+             aria-describedby="scene-hint">
+    </div>
+    <p id="scene-hint" class="hint">
+      Accepts JPEG, PNG and WebP. Images are processed in memory and never stored.
+    </p>
+
+    <div class="panel">
+      <h3 id="scene-result-heading" class="panel__title">Result</h3>
+      <p id="scene-result" class="caption" role="status" aria-live="polite">
+        No description yet.
+      </p>
+      <ul id="scene-detections" class="detections" aria-labelledby="scene-result-heading"></ul>
+    </div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- 8. About / accessibility -->
+  <section id="about" aria-labelledby="about-heading">
+    <h2 id="about-heading">About &amp; accessibility</h2>
+    <p class="lede">
+      Snapdragoon is built to the Web Content Accessibility Guidelines (WCAG) 2.2
+      at Level AA. That is a deliberate response to how often on-device AI
+      demos are inaccessible by default.
+    </p>
+
+    <h3>What it does</h3>
+    <ul class="prose-list">
+      <li>Captions microphone speech entirely on-device, with no network call.</li>
+      <li>Describes what the camera sees, with confidence scores.</li>
+      <li>Runs on the Snapdragon NPU via Qualcomm AI Hub, or on CPU via ONNX Runtime.</li>
+    </ul>
+
+    <h3>Accessibility commitments</h3>
+    <ul class="prose-list">
+      <li>Captions announce through a polite live region, so they never interrupt.</li>
+      <li>Full transcript history is available to re-read, not only announced live.</li>
+      <li>Every control is a real button, reachable and operable by keyboard alone.</li>
+      <li>A skip link is the first focusable element.</li>
+      <li>Focus is never trapped; visible focus indicators are never suppressed.</li>
+      <li>All text meets at least 4.5:1 contrast; the live region respects reduced motion.</li>
+    </ul>
+
+    <h3>Known limitations</h3>
+    <ul class="prose-list">
+      <li>English-only speech recognition.</li>
+      <li>Scene description is whole-image classification, so it will not read text or count objects.</li>
+      <li>The demo engine produces synthetic captions and is clearly labelled as such.</li>
+    </ul>
+
+    <p class="hint">
+      Full conformance statement: <code>docs/ACCESSIBILITY.md</code> in the
+      repository.
+    </p>
+  </section>
+</main>
+
+<footer class="contentinfo">
+  <div class="wrap">
+    <p>
+      Snapdragoon — built for the Snapdragon® AI Lab Build &amp; Present Challenge.
+    </p>
+    <p class="hint">
+      Runs fully offline. No audio, image, or transcript data leaves this device.
+    </p>
+  </div>
+</footer>
+
+<script>window.SNAPDRAGOON_STATUS = __SNAPDRAGOON_STATUS__;</script>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+# Real inference extras. Install with:
+#   pip install -r requirements.txt -r requirements-ml.txt
+#
+# Then fetch models:
+#   python scripts/fetch_models.py --public
+#
+# Without these, Snapdragoon still runs -- on DemoEngine, which performs no
+# inference at all and says so in the UI.
+
+# ONNX Runtime. On Windows-on-Snapdragon use the QNN-enabled build instead:
+#   pip install onnxruntime-qnn
+# or the Qualcomm AI Hub DirectML plugin, which registers QNNExecutionProvider.
+onnxruntime>=1.17
+
+# Whisper detokenisation. Whisper's English vocabulary is GPT-2 byte-level BPE,
+# and tiktoken is the only lightweight way to read it back.
+#
+# Strongly recommended rather than mandatory: without it the decoder falls back
+# to a printable-ASCII projection, which mangles punctuation and discards
+# non-ASCII characters entirely. The accuracy tests that compare against the
+# reference transcript are skipped when it is absent.
+tiktoken>=0.6
+
+# --- dev only ---------------------------------------------------------------
+# Pillow is needed only by scripts/make_sample_assets.py, which regenerates the
+# synthetic demo assets. Not required to run the app.
+# pillow>=10.0
+
+# Qualcomm AI Hub toolchain. Only needed to compile/export to QNN context
+# binaries on a Snapdragon machine. Not installable on macOS in most cases --
+# see docs/SNAPDRAGON_DEPLOYMENT.md.
+# qai-hub>=0.10 ; platform_system == "Windows"
+
+# System-audio loopback on Windows (WASAPI), for captioning system audio
+# rather than the room.
+# soundcard>=0.3 ; platform_system == "Windows"

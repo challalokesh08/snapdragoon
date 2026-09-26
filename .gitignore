@@ -1,0 +1,32 @@
+# Models and compiled NPU artefacts are large and fetched, not committed.
+models/*
+!models/.gitkeep
+!models/README.md
+*.onnx
+*.tflite
+*.bin
+*.so
+*.dll
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local artefacts
+.env
+*.log
+out/
+captions.log
